@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臨床生命徵象與症狀輔助診斷系統</title>
+    <!-- Tailwind CSS v3 via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    },
+                    colors: {
+                        clinical: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        /* Touch interaction optimizations */
+        .touch-target {
+            min-height: 48px;
+        }
+
+        /* Print styles optimization */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-full {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-shadow: none !important;
+                border: 1px solid #ccc !important;
+            }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200 antialiased selection:bg-sky-100 selection:text-sky-900">
+
+    <!-- Navigation / Header -->
+    <header class="no-print bg-white/90 dark:bg-slate-800/90 backdrop-blur border-b border-slate-200 dark:border-slate-700/80 sticky top-0 z-30 shadow-sm transition-colors duration-200">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+            
+            <div class="flex items-center space-x-3">
+                <div class="p-2.5 bg-sky-500/10 dark:bg-sky-400/20 text-sky-600 dark:text-sky-400 rounded-xl flex items-center justify-center">
+                    <i data-lucide="activity" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-tight">生命徵象與症狀輔助診斷系統</h1>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300 hidden sm:inline-block">C4.5 Tree + Vitals</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">護理照護輔助工具 • 體溫/血壓/血氧分析 & 決策樹</p>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button onclick="window.print()" class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none transition-colors" title="列印或匯出 PDF 報告">
+                    <i data-lucide="printer" class="w-5 h-5"></i>
+                </button>
+
+                <button id="themeToggleBtn" onclick="toggleDarkMode()" class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus:outline-none transition-colors" title="切換深色/淺色模式">
+                    <i data-lucide="moon" id="themeIconMoon" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="sun" id="themeIconSun" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+
+                <div class="h-4 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                <button onclick="resetAllFields()" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/80 transition-colors">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                    <span class="hidden xs:inline">全部重設</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Left / Main Panel: Vital Signs & Symptom Inputs (7 cols) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Section 1: Vital Signs Entry Card -->
+                <section class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm transition-colors duration-200 print-full">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/60 mb-4">
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="heart-pulse" class="w-5 h-5 text-rose-500"></i>
+                            生理量測數值 (Vital Signs)
+                        </h2>
+                        <span class="text-xs text-slate-400">護理評估輸入</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        <!-- Height Input -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">身高 (Height)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="heightInput" oninput="calculateVitalsAndDiagnosis()" placeholder="例如: 170" class="w-full pl-3 pr-12 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400">cm</div>
+                            </div>
+                        </div>
+
+                        <!-- Weight Input -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">體重 (Weight)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="weightInput" oninput="calculateVitalsAndDiagnosis()" placeholder="例如: 65" class="w-full pl-3 pr-12 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400">kg</div>
+                            </div>
+                        </div>
+
+                        <!-- BMI Display Box -->
+                        <div class="sm:col-span-2 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="calculator" class="w-4 h-4 text-sky-500"></i>
+                                <span class="text-xs font-semibold text-slate-600 dark:text-slate-400">自動計算 BMI：</span>
+                                <span id="bmiValue" class="text-base font-extrabold text-slate-800 dark:text-slate-100">--</span>
+                            </div>
+                            <span id="bmiBadge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                未計算
+                            </span>
+                        </div>
+
+                        <!-- Blood Pressure Systolic -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">收縮壓 (Systolic BP)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="sysBpInput" oninput="calculateVitalsAndDiagnosis()" placeholder="例如: 120" class="w-full pl-3 pr-16 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400">mmHg</div>
+                            </div>
+                        </div>
+
+                        <!-- Blood Pressure Diastolic -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">舒張壓 (Diastolic BP)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="diaBpInput" oninput="calculateVitalsAndDiagnosis()" placeholder="例如: 80" class="w-full pl-3 pr-16 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400">mmHg</div>
+                            </div>
+                        </div>
+
+                        <!-- Heart Rate Input -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">心跳速率 (Heart Rate)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="hrInput" oninput="calculateVitalsAndDiagnosis()" placeholder="例如: 75" class="w-full pl-3 pr-14 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400">bpm</div>
+                            </div>
+                        </div>
+
+                        <!-- Blood Oxygen SpO2 Input -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">血氧濃度 (SpO2)</label>
+                            <div class="relative rounded-xl shadow-sm">
+                                <input type="number" id="spo2Input" oninput="calculateVitalsAndDiagnosis()" placeholder="例如: 98" class="w-full pl-3 pr-12 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 dark:text-white">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-xs text-slate-400">%</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Section 2: Symptoms Input Card -->
+                <section class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm transition-colors duration-200 print-full">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/60 mb-4">
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="clipboard-check" class="w-5 h-5 text-sky-500"></i>
+                            臨床症狀勾選 (C4.5 決策輸入)
+                        </h2>
+                        <span class="text-xs text-slate-400">多選症狀欄位</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        
+                        <!-- Lymph node -->
+                        <label id="card-lymph" class="symptom-card touch-target flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40 cursor-pointer transition-all duration-150 hover:border-sky-400">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-300">
+                                    <i data-lucide="activity" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800 dark:text-slate-100">淋巴腺腫脹</span>
+                                    <span class="block text-[11px] text-slate-500 dark:text-slate-400">Swollen Lymph Nodes (Key Node 1)</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" id="lymph" onchange="calculateVitalsAndDiagnosis()" class="w-5 h-5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 accent-sky-600 cursor-pointer">
+                        </label>
+
+                        <!-- Fever -->
+                        <label id="card-fever" class="symptom-card touch-target flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40 cursor-pointer transition-all duration-150 hover:border-sky-400">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300">
+                                    <i data-lucide="thermometer" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800 dark:text-slate-100">發燒</span>
+                                    <span class="block text-[11px] text-slate-500 dark:text-slate-400">Fever (Key Node 2)</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" id="fever" onchange="calculateVitalsAndDiagnosis()" class="w-5 h-5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 accent-sky-600 cursor-pointer">
+                        </label>
+
+                        <!-- Sore throat -->
+                        <label id="card-sorethroat" class="symptom-card touch-target flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40 cursor-pointer transition-all duration-150 hover:border-sky-400">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-300">
+                                    <i data-lucide="frown" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800 dark:text-slate-100">喉嚨痛</span>
+                                    <span class="block text-[11px] text-slate-500 dark:text-slate-400">Sore Throat</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" id="sorethroat" onchange="calculateVitalsAndDiagnosis()" class="w-5 h-5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 accent-sky-600 cursor-pointer">
+                        </label>
+
+                        <!-- Congestion -->
+                        <label id="card-congestion" class="symptom-card touch-target flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40 cursor-pointer transition-all duration-150 hover:border-sky-400">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300">
+                                    <i data-lucide="wind" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800 dark:text-slate-100">充血 / 鼻塞</span>
+                                    <span class="block text-[11px] text-slate-500 dark:text-slate-400">Nasal Congestion</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" id="congestion" onchange="calculateVitalsAndDiagnosis()" class="w-5 h-5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 accent-sky-600 cursor-pointer">
+                        </label>
+
+                        <!-- Headache -->
+                        <label id="card-headache" class="symptom-card touch-target flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/40 cursor-pointer transition-all duration-150 hover:border-sky-400">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300">
+                                    <i data-lucide="brain" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800 dark:text-slate-100">頭痛</span>
+                                    <span class="block text-[11px] text-slate-500 dark:text-slate-400">Headache</span>
+                                </div>
+                            </div>
+                            <input type="checkbox" id="headache" onchange="calculateVitalsAndDiagnosis()" class="w-5 h-5 text-sky-600 rounded border-slate-300 focus:ring-sky-500 accent-sky-600 cursor-pointer">
+                        </label>
+
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Panel: Clinical Alerts, Diagnostic Outcomes & Action Guidance (5 cols) -->
+            <div class="lg:col-span-5 space-y-4">
+
+                <!-- Vital Signs Warning / Alert Center -->
+                <div id="vitalsAlertBox" class="hidden p-4 rounded-2xl border transition-all duration-300 shadow-sm">
+                    <div class="flex items-center gap-2 font-bold text-sm mb-1" id="vitalsAlertTitle">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                        <span>生命徵象異常警告</span>
+                    </div>
+                    <ul id="vitalsAlertList" class="list-disc list-inside text-xs space-y-1">
+                        <!-- Dynamic Warnings injected here -->
+                    </ul>
+                </div>
+
+                <!-- C4.5 Diagnosis Outcome Display Card -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/80 p-5 shadow-sm transition-colors duration-200 min-h-[260px] flex flex-col justify-between print-full">
+                    
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700/60">
+                            <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="git-merge" class="w-4 h-4 text-sky-500"></i>
+                                C4.5 決策樹推論結果
+                            </span>
+                            <span id="ruleBadge" class="hidden text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                Target Output
+                            </span>
+                        </div>
+
+                        <!-- Blank State -->
+                        <div id="blankState" class="py-10 flex flex-col items-center justify-center text-center">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-700/50 text-slate-300 dark:text-slate-600 flex items-center justify-center mb-2">
+                                <i data-lucide="file-x-2" class="w-6 h-6"></i>
+                            </div>
+                            <h3 class="text-sm font-semibold text-slate-400 dark:text-slate-500">等待症狀輸入</h3>
+                            <p class="text-xs text-slate-400/80 dark:text-slate-500/80 mt-1 max-w-[220px]">當未勾選任何症狀時，此處依規定保持空白。</p>
+                        </div>
+
+                        <!-- Active Diagnosis Outcome -->
+                        <div id="resultContent" class="hidden py-4 text-center">
+                            <div id="resultBadgeIcon" class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-3">
+                                <!-- Dynamic Icon -->
+                            </div>
+                            <p class="text-xs font-semibold text-slate-400 dark:text-slate-400 mb-1">推論可能疾病結果</p>
+                            <div id="diagnosisName" class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                                <!-- Disease Outcome -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Action Banner -->
+                    <div id="logicBanner" class="hidden mt-2 p-3.5 rounded-xl text-xs leading-relaxed border">
+                        <div class="font-bold mb-1 flex items-center gap-1.5" id="logicTitle">
+                            <i data-lucide="corner-down-right" class="w-4 h-4"></i>
+                            <span id="logicTitleText">護理建議與決策路徑</span>
+                        </div>
+                        <div id="logicDescription" class="text-slate-600 dark:text-slate-300">
+                            <!-- Rule Clinical Guidance -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Info Card for Nursing Print Export -->
+                <div class="bg-slate-100/80 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700/60 p-4 text-xs text-slate-600 dark:text-slate-400">
+                    <div class="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">
+                            <i data-lucide="check-square" class="w-4 h-4 text-sky-500"></i>
+                            評估快照 (Summary)
+                        </span>
+                        <span class="text-[10px] text-slate-400">護理紀錄參考</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div>血壓：<span id="summaryBP" class="font-semibold">--</span></div>
+                        <div>血氧 SpO2：<span id="summarySpO2" class="font-semibold">--</span></div>
+                        <div>心跳 HR：<span id="summaryHR" class="font-semibold">--</span></div>
+                        <div>BMI 指數：<span id="summaryBMI" class="font-semibold">--</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="no-print bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700/80 py-3 mt-auto">
+        <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400 dark:text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>臨床護理輔助系統 • 生理徵象評估 & C4.5 決策模型</span>
+            <span>C4.5 Min Leaf = 2 | Confidence = 0.25</span>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Dark Mode Controller
+        function toggleDarkMode() {
+            const htmlClass = document.documentElement.classList;
+            if (htmlClass.contains('dark')) {
+                htmlClass.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlClass.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        /**
+         * Main Calculation & Logic Handler
+         */
+        function calculateVitalsAndDiagnosis() {
+            // Read Vital Signs
+            const h = parseFloat(document.getElementById('heightInput').value);
+            const w = parseFloat(document.getElementById('weightInput').value);
+            const sys = parseFloat(document.getElementById('sysBpInput').value);
+            const dia = parseFloat(document.getElementById('diaBpInput').value);
+            const hr = parseFloat(document.getElementById('hrInput').value);
+            const spo2 = parseFloat(document.getElementById('spo2Input').value);
+
+            // Read Symptoms
+            const lymph = document.getElementById('lymph').checked;
+            const fever = document.getElementById('fever').checked;
+            const sorethroat = document.getElementById('sorethroat').checked;
+            const congestion = document.getElementById('congestion').checked;
+            const headache = document.getElementById('headache').checked;
+
+            const hasAnySymptom = lymph || fever || sorethroat || congestion || headache;
+
+            // Update Symptom Card Active Styles
+            updateCardStyle('lymph', 'card-lymph');
+            updateCardStyle('fever', 'card-fever');
+            updateCardStyle('sorethroat', 'card-sorethroat');
+            updateCardStyle('congestion', 'card-congestion');
+            updateCardStyle('headache', 'card-headache');
+
+            // 1. BMI Calculation
+            const bmiValueEl = document.getElementById('bmiValue');
+            const bmiBadgeEl = document.getElementById('bmiBadge');
+            const summaryBMI = document.getElementById('summaryBMI');
+
+            if (h > 0 && w > 0) {
+                const bmi = (w / ((h / 100) * (h / 100))).toFixed(1);
+                bmiValueEl.textContent = bmi;
+                summaryBMI.textContent = bmi;
+
+                if (bmi < 18.5) {
+                    bmiBadgeEl.textContent = "體重過輕";
+                    bmiBadgeEl.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300";
+                } else if (bmi >= 18.5 && bmi < 24) {
+                    bmiBadgeEl.textContent = "健康體位";
+                    bmiBadgeEl.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300";
+                } else if (bmi >= 24 && bmi < 27) {
+                    bmiBadgeEl.textContent = "體重過重";
+                    bmiBadgeEl.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300";
+                } else {
+                    bmiBadgeEl.textContent = "肥胖警告";
+                    bmiBadgeEl.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300";
+                }
+            } else {
+                bmiValueEl.textContent = "--";
+                summaryBMI.textContent = "--";
+                bmiBadgeEl.textContent = "未計算";
+                bmiBadgeEl.className = "text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+            }
+
+            // Update Summaries
+            document.getElementById('summaryBP').textContent = (sys && dia) ? `${sys}/${dia} mmHg` : '--';
+            document.getElementById('summarySpO2').textContent = spo2 ? `${spo2}%` : '--';
+            document.getElementById('summaryHR').textContent = hr ? `${hr} bpm` : '--';
+
+            // 2. Vital Signs Warning Evaluation
+            const vitalsAlertBox = document.getElementById('vitalsAlertBox');
+            const vitalsAlertTitle = document.getElementById('vitalsAlertTitle');
+            const vitalsAlertList = document.getElementById('vitalsAlertList');
+            let warnings = [];
+            let isHighCritical = false;
+
+            // SpO2 Assessment
+            if (spo2 > 0) {
+                if (spo2 < 95) {
+                    warnings.push(`血氧濃度降低 (SpO2: ${spo2}%)：已低於 95% 標準，請準備氣道/氧氣給予。`);
+                    isHighCritical = true;
+                }
+            }
+
+            // Blood Pressure Assessment
+            if (sys > 0 || dia > 0) {
+                if (sys >= 180 || dia >= 120) {
+                    warnings.push(`高血壓危機 (BP: ${sys || '--'}/${dia || '--'} mmHg)：數值極高，請立即通知醫師評估。`);
+                    isHighCritical = true;
+                } else if (sys >= 140 || dia >= 90) {
+                    warnings.push(`二期高血壓 (BP: ${sys || '--'}/${dia || '--'} mmHg)`);
+                } else if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) {
+                    warnings.push(`一期高血壓 (BP: ${sys || '--'}/${dia || '--'} mmHg)`);
+                } else if (sys < 90 || dia < 60) {
+                    warnings.push(`低血壓偏低警告 (BP: ${sys || '--'}/${dia || '--'} mmHg)`);
+                }
+            }
+
+            // Heart Rate Assessment
+            if (hr > 0) {
+                if (hr > 100) {
+                    warnings.push(`心跳過速 (HR: ${hr} bpm)：高於 100 bpm`);
+                } else if (hr < 60) {
+                    warnings.push(`心跳過緩 (HR: ${hr} bpm)：低於 60 bpm`);
+                }
+            }
+
+            // Render Warnings
+            if (warnings.length > 0) {
+                vitalsAlertBox.classList.remove('hidden');
+                vitalsAlertList.innerHTML = warnings.map(w => `<li>${w}</li>`).join('');
+
+                if (isHighCritical) {
+                    vitalsAlertBox.className = "p-4 rounded-2xl border bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 shadow-sm animate-pulse";
+                    vitalsAlertTitle.className = "flex items-center gap-2 font-bold text-sm mb-1 text-rose-700 dark:text-rose-300";
+                } else {
+                    vitalsAlertBox.className = "p-4 rounded-2xl border bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-sm";
+                    vitalsAlertTitle.className = "flex items-center gap-2 font-bold text-sm mb-1 text-amber-700 dark:text-amber-300";
+                }
+            } else {
+                vitalsAlertBox.classList.add('hidden');
+            }
+
+            // 3. C4.5 Symptom Diagnostic Engine
+            const blankState = document.getElementById('blankState');
+            const resultContent = document.getElementById('resultContent');
+            const diagnosisName = document.getElementById('diagnosisName');
+            const resultBadgeIcon = document.getElementById('resultBadgeIcon');
+            const logicBanner = document.getElementById('logicBanner');
+            const logicTitleText = document.getElementById('logicTitleText');
+            const logicDescription = document.getElementById('logicDescription');
+            const ruleBadge = document.getElementById('ruleBadge');
+
+            // Blank state requirement
+            if (!hasAnySymptom) {
+                blankState.classList.remove('hidden');
+                resultContent.classList.add('hidden');
+                logicBanner.classList.add('hidden');
+                ruleBadge.classList.add('hidden');
+                return;
+            }
+
+            blankState.classList.add('hidden');
+            resultContent.classList.remove('hidden');
+            logicBanner.classList.remove('hidden');
+            ruleBadge.classList.remove('hidden');
+
+            // Rules
+            if (lymph) {
+                // Rule 1: Streptococcal Pharyngitis
+                diagnosisName.textContent = "鏈球菌性喉炎";
+                diagnosisName.className = "text-2xl sm:text-3xl font-extrabold tracking-tight text-rose-600 dark:text-rose-400";
+
+                resultBadgeIcon.className = "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-3 bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 shadow-inner";
+                resultBadgeIcon.innerHTML = `<i data-lucide="shield-alert" class="w-9 h-9"></i>`;
+
+                ruleBadge.textContent = "C4.5 規則 1";
+                ruleBadge.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300";
+
+                logicBanner.className = "mt-2 p-3.5 rounded-xl text-xs leading-relaxed border bg-rose-50/80 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/60 text-rose-900 dark:text-rose-200";
+                logicTitleText.textContent = "規則 1 路徑：［淋巴腺腫脹 = 是］";
+                logicDescription.innerHTML = "<strong>護理處置建議：</strong>具高度感染風險。建議執行咽喉抹片培養，評估抗生素治療需求，並記錄發燒與吞嚥狀況。";
+
+            } else if (fever) {
+                // Rule 2: Common Cold
+                diagnosisName.textContent = "感冒";
+                diagnosisName.className = "text-2xl sm:text-3xl font-extrabold tracking-tight text-amber-600 dark:text-amber-400";
+
+                resultBadgeIcon.className = "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-3 bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 shadow-inner";
+                resultBadgeIcon.innerHTML = `<i data-lucide="thermometer-snowflake" class="w-9 h-9"></i>`;
+
+                ruleBadge.textContent = "C4.5 規則 2";
+                ruleBadge.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300";
+
+                logicBanner.className = "mt-2 p-3.5 rounded-xl text-xs leading-relaxed border bg-amber-50/80 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200";
+                logicTitleText.textContent = "規則 2 路徑：［無淋巴腫脹］+［有發燒］";
+                logicDescription.innerHTML = "<strong>護理處置建議：</strong>常見病毒性上呼吸道感染。建議衛教多喝水、充份休息，進行物理降溫與退熱監測。";
+
+            } else {
+                // Rule 3: Allergy
+                diagnosisName.textContent = "過敏";
+                diagnosisName.className = "text-2xl sm:text-3xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400";
+
+                resultBadgeIcon.className = "w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-3 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 shadow-inner";
+                resultBadgeIcon.innerHTML = `<i data-lucide="flower-2" class="w-9 h-9"></i>`;
+
+                ruleBadge.textContent = "C4.5 規則 3";
+                ruleBadge.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300";
+
+                logicBanner.className = "mt-2 p-3.5 rounded-xl text-xs leading-relaxed border bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60 text-emerald-900 dark:text-emerald-200";
+                logicTitleText.textContent = "規則 3 路徑：［無淋巴腫脹］+［無發燒］";
+                logicDescription.innerHTML = "<strong>護理處置建議：</strong>臨床表現偏向呼吸道過敏。建議釐清環境過敏原接觸史，配戴口罩保護。";
+            }
+
+            lucide.createIcons();
+        }
+
+        function updateCardStyle(checkboxId, cardId) {
+            const checkbox = document.getElementById(checkboxId);
+            const card = document.getElementById(cardId);
+
+            if (checkbox.checked) {
+                card.classList.remove('border-slate-200', 'dark:border-slate-700', 'bg-slate-50/60', 'dark:bg-slate-900/40');
+                card.classList.add('border-sky-500', 'dark:border-sky-500', 'bg-sky-50/60', 'dark:bg-sky-950/40', 'shadow-sm');
+            } else {
+                card.classList.remove('border-sky-500', 'dark:border-sky-500', 'bg-sky-50/60', 'dark:bg-sky-950/40', 'shadow-sm');
+                card.classList.add('border-slate-200', 'dark:border-slate-700', 'bg-slate-50/60', 'dark:bg-slate-900/40');
+            }
+        }
+
+        function resetAllFields() {
+            document.getElementById('heightInput').value = '';
+            document.getElementById('weightInput').value = '';
+            document.getElementById('sysBpInput').value = '';
+            document.getElementById('diaBpInput').value = '';
+            document.getElementById('hrInput').value = '';
+            document.getElementById('spo2Input').value = '';
+
+            document.getElementById('lymph').checked = false;
+            document.getElementById('fever').checked = false;
+            document.getElementById('sorethroat').checked = false;
+            document.getElementById('congestion').checked = false;
+            document.getElementById('headache').checked = false;
+
+            calculateVitalsAndDiagnosis();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            calculateVitalsAndDiagnosis();
+        });
+    </script>
+</body>
+</html>
